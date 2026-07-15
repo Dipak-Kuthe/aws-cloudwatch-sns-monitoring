@@ -1,0 +1,77 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Cloud monitoring and alerting - an SNS topic with an email subscription plus
+  CloudWatch alarms for EC2 CPU utilization and instance status checks, and a
+  log group with retention.
+
+Parameters:
+  NotifyEmail:
+    Type: String
+    Description: Email address to receive alarm notifications
+  InstanceId:
+    Type: String
+    Description: EC2 instance ID to monitor
+
+Resources:
+
+  AlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: monitoring-alerts
+      DisplayName: Monitoring Alerts
+
+  EmailSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref AlertTopic
+      Protocol: email
+      Endpoint: !Ref NotifyEmail
+
+  AppLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /app/monitoring-demo
+      RetentionInDays: 14
+
+  HighCpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ec2-high-cpu
+      AlarmDescription: CPU utilization above 80% for 10 minutes
+      Namespace: AWS/EC2
+      MetricName: CPUUtilization
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref InstanceId
+      AlarmActions:
+        - !Ref AlertTopic
+      OKActions:
+        - !Ref AlertTopic
+
+  StatusCheckAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ec2-status-check-failed
+      AlarmDescription: Instance status check failed
+      Namespace: AWS/EC2
+      MetricName: StatusCheckFailed
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref InstanceId
+      AlarmActions:
+        - !Ref AlertTopic
+
+Outputs:
+  TopicArn:
+    Description: ARN of the SNS alert topic
+    Value: !Ref AlertTopic

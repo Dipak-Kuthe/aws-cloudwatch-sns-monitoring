@@ -9,6 +9,21 @@ that fans out notifications to subscribed email addresses.
 
 ---
 
+## Architecture
+
+```mermaid
+flowchart LR
+    EC2[EC2 Instance] -->|metrics| CW[CloudWatch]
+    CW --> A1[Alarm: CPU > 80%]
+    CW --> A2[Alarm: Status Check Failed]
+    A1 --> SNS[SNS Topic: monitoring-alerts]
+    A2 --> SNS
+    SNS -->|email| USER[Engineer Inbox]
+    EC2 -->|logs| LG[Log Group /app/monitoring-demo - 14 day retention]
+```
+
+> Full diagram details: [ARCHITECTURE.md](ARCHITECTURE.md)
+
 ## Skills Demonstrated
 - **Amazon CloudWatch** — metrics, alarms, dashboards
 - **CloudWatch Logs** — log groups and retention
